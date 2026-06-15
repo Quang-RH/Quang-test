@@ -1,0 +1,156 @@
+:root {
+  --blue: #1f5fa8;
+  --ink: #1a1a1a;
+  --muted: #666;
+  --border: #d0d7de;
+  --bg: #f4f6f8;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  color: var(--ink);
+  background: var(--bg);
+  line-height: 1.6;
+}
+
+/* ---------- Panel điều khiển ---------- */
+.panel {
+  max-width: 820px;
+  margin: 28px auto 0;
+  padding: 24px 28px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.panel-title { margin: 0 0 4px; font-size: 24px; }
+.panel-sub { margin: 0 0 18px; color: var(--muted); }
+
+.dropzone {
+  border: 2px dashed var(--border);
+  border-radius: 10px;
+  padding: 28px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color .15s, background .15s;
+}
+.dropzone.dragover { border-color: var(--blue); background: #eef4fb; }
+.dz-icon { font-size: 28px; }
+.dz-text { color: var(--muted); margin-top: 6px; }
+.dz-link { color: var(--blue); text-decoration: underline; }
+.dz-file { margin-top: 8px; font-weight: 600; color: var(--ink); }
+
+.meta-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+  margin: 18px 0;
+}
+.meta-grid label { font-size: 13px; color: var(--muted); display: flex; flex-direction: column; gap: 5px; }
+.meta-grid .opt { color: #aaa; font-weight: 400; }
+.meta-grid input {
+  padding: 9px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 14px;
+}
+@media (max-width: 680px) { .meta-grid { grid-template-columns: 1fr; } }
+
+.btn-primary {
+  background: var(--blue);
+  color: #fff;
+  border: 0;
+  padding: 11px 22px;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.btn-primary:disabled { background: #9bb6d6; cursor: not-allowed; }
+.status { margin-top: 12px; font-size: 14px; min-height: 20px; }
+.status.err { color: #c0392b; }
+.status.ok { color: #1e7e34; }
+.status.loading { color: var(--blue); }
+
+/* ---------- Action bar ---------- */
+.actionbar {
+  max-width: 820px;
+  margin: 18px auto 0;
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+.btn {
+  background: #fff;
+  border: 1px solid var(--border);
+  padding: 9px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+}
+.btn:hover { border-color: var(--blue); color: var(--blue); }
+
+/* ---------- Tài liệu biên bản ---------- */
+.doc {
+  max-width: 820px;
+  margin: 18px auto 60px;
+  padding: 48px 56px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.doc h1.doc-title {
+  text-align: center;
+  color: var(--blue);
+  font-size: 26px;
+  margin: 0 0 4px;
+}
+.doc .doc-id { text-align: center; color: var(--blue); font-size: 20px; margin: 0 0 22px; }
+.doc .doc-meta { margin: 0 0 26px; }
+.doc .doc-meta div { margin: 2px 0; }
+.doc h2.sec {
+  color: var(--ink);
+  font-size: 19px;
+  border-bottom: 0;
+  margin: 28px 0 12px;
+}
+.doc h3.cat { color: var(--blue); font-size: 15px; margin: 18px 0 8px; }
+.doc .dec-title { font-weight: 700; margin: 12px 0 2px; }
+.doc .dec-detail { margin: 0 0 8px; color: #2a2a2a; }
+
+.doc table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 8px 0 6px;
+  font-size: 14px;
+}
+.doc th, .doc td {
+  border: 1px solid var(--border);
+  padding: 10px 12px;
+  text-align: left;
+  vertical-align: top;
+}
+.doc th { background: #f0f2f5; font-weight: 600; }
+.doc .footer-note {
+  margin-top: 34px;
+  color: var(--muted);
+  font-size: 13px;
+  font-style: italic;
+}
+
+/* ---------- In / Lưu PDF ---------- */
+@media print {
+  body { background: #fff; }
+  .no-print { display: none !important; }
+  .doc {
+    max-width: none;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+  }
+  .doc table, .doc tr, .dec-title, .dec-detail { page-break-inside: avoid; }
+  @page { margin: 18mm 16mm; }
+}

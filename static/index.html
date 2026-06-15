@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Meeting Notes — Biên bản họp tự động</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <!-- Bảng điều khiển (ẩn khi in) -->
+  <section class="panel no-print" id="controls">
+    <h1 class="panel-title">🎙️ AI Meeting Notes</h1>
+    <p class="panel-sub">Tải file ghi âm cuộc họp → AI tạo biên bản họp tự động.</p>
+
+    <div class="dropzone" id="dropzone">
+      <input type="file" id="fileInput" accept="audio/*,video/*,.mp3,.m4a,.mp4,.wav,.aac,.ogg,.flac,.webm,.opus" hidden />
+      <div class="dz-inner">
+        <div class="dz-icon">⬆️</div>
+        <div class="dz-text">Kéo-thả file audio vào đây, hoặc <span class="dz-link">bấm để chọn</span></div>
+        <div class="dz-file" id="fileName"></div>
+      </div>
+    </div>
+
+    <div class="meta-grid">
+      <label>Tên cuộc họp <span class="opt">(tùy chọn)</span>
+        <input type="text" id="mTitle" placeholder="VD: Họp review cơ chế cấu hình" />
+      </label>
+      <label>Ngày họp <span class="opt">(tùy chọn)</span>
+        <input type="text" id="mDate" placeholder="VD: 12/06/2026" />
+      </label>
+      <label>Người dự <span class="opt">(tùy chọn)</span>
+        <input type="text" id="mParticipants" placeholder="VD: BI, Backend, Frontend" />
+      </label>
+    </div>
+
+    <button class="btn-primary" id="btnRun" disabled>Tạo biên bản</button>
+    <div class="status" id="status"></div>
+  </section>
+
+  <!-- Thanh hành động kết quả (ẩn khi in) -->
+  <section class="actionbar no-print" id="actionbar" hidden>
+    <button class="btn" id="btnPrint">🖨️ In / Lưu PDF</button>
+    <button class="btn" id="btnCopy">📋 Copy markdown</button>
+    <button class="btn" id="btnDownload">⬇️ Tải .md</button>
+  </section>
+
+  <!-- Biên bản (in được) -->
+  <main class="doc" id="doc" hidden></main>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
