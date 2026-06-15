@@ -1,0 +1,18 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Secrets & config
+.env
+
+# Temp uploads
+tmp/
+*.mp3
+*.m4a
+*.mp4
+*.wav
+
+# OS
+Thumbs.db
+.DS_Store
