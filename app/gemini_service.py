@@ -1,4 +1,4 @@
-"""Gemini end-to-end: audio -> JSON biên bản họp."""
+"""Gemini end-to-end: audio -> JSON biên bản họp (chỉ tập trung nội dung, không nêu tên/vai trò người)."""
 import json
 import time
 
@@ -14,7 +14,7 @@ TRANSIENT_CODES = (429, 500, 503)
 
 
 # ---- JSON schema (Pydantic) Gemini phải trả về ----
-# Các trường text "có thể thiếu" dùng chuỗi rỗng "" thay vì null cho gọn schema.
+# Trường text "có thể thiếu" dùng chuỗi rỗng "" thay vì null cho gọn schema.
 class DecisionItem(BaseModel):
     title: str
     detail: str
@@ -27,25 +27,16 @@ class DecisionGroup(BaseModel):
 
 class ActionItem(BaseModel):
     task: str
-    owner: str             # "" nếu không rõ
     status_deadline: str   # "" nếu không có
     note: str
-
-
-class Personnel(BaseModel):
-    member: str
-    organization: str
-    role: str
 
 
 class MeetingSummary(BaseModel):
     title: str
     meeting_date: str      # "" nếu không nhắc trong audio
-    participants: str      # "" nếu không nhắc trong audio
     summary: str
     key_decisions: list[DecisionGroup]
     action_items: list[ActionItem]
-    personnel: list[Personnel]
 
 
 PROMPT = """Bạn là thư ký chuyên ghi biên bản họp. Dưới đây là file ghi âm một cuộc họp \
@@ -53,15 +44,16 @@ bằng tiếng Việt (có lẫn thuật ngữ tiếng Anh như deploy, sprint, 
 
 Hãy nghe kỹ và tạo biên bản họp theo đúng JSON schema được yêu cầu. Quy tắc:
 - Viết bằng tiếng Việt. GIỮ NGUYÊN các thuật ngữ tiếng Anh, không dịch sang tiếng Việt.
+- CHỈ tập trung vào NỘI DUNG cuộc họp. TUYỆT ĐỐI KHÔNG nêu tên người, KHÔNG gán vai trò
+  hay người phụ trách cho bất kỳ ai. Diễn đạt trung tính theo nội dung (vd "cần làm...",
+  "thống nhất...", "đề xuất...") thay vì "ai làm việc gì".
 - summary: 1 đoạn tóm tắt cô đọng toàn bộ nội dung cuộc họp.
 - key_decisions: gom các quyết định / nội dung quan trọng theo nhóm chủ đề (category).
-  Mỗi mục gồm title (tiêu đề ngắn) và detail (1 đoạn diễn giải).
-- action_items: các việc cần làm. owner = người phụ trách (để "" nếu không nói rõ);
-  status_deadline = trạng thái/deadline (để "" nếu không có); note = mô tả chi tiết việc cần làm.
-- personnel: CHỈ liệt kê người được nhắc tên rõ ràng kèm vai trò; không xác định được ai thì để mảng rỗng [].
+  Mỗi mục gồm title (tiêu đề ngắn) và detail (1 đoạn diễn giải). Không nêu tên người.
+- action_items: các việc cần làm, CHỈ mô tả công việc (không kèm tên người phụ trách).
+  status_deadline = trạng thái/deadline nếu có nhắc (để "" nếu không); note = mô tả chi tiết việc cần làm.
 - title: tiêu đề ngắn gọn của cuộc họp.
 - meeting_date: ngày họp nếu được nhắc trong audio (để "" nếu không).
-- participants: người tham dự nếu được nhắc (để "" nếu không).
 - TUYỆT ĐỐI không bịa thông tin không có trong audio. Không chắc thì để rỗng.
 Chỉ trả về JSON đúng schema, không kèm giải thích."""
 

@@ -17,22 +17,17 @@ App có backend Python → **không** up tĩnh kiểu Netlify được. Phải d
 
 Cần: 1 tài khoản GitHub + 1 tài khoản Render (free).
 
-1. **Đẩy code lên GitHub repo PRIVATE** (key không bị đẩy vì đã gitignore):
-   ```bash
-   cd C:\QUANG.HO_IT\ai-meeting-notes
-   gh repo create ai-meeting-notes --private --source . --push
-   # hoặc tạo repo private trên github.com rồi: git remote add origin <url> && git push -u origin main
-   ```
-2. Vào https://render.com → **New** → **Web Service** → kết nối GitHub repo vừa tạo.
+1. Code đã được đẩy lên repo: **https://github.com/Quang-RH/Quang-test** (key không bị đẩy vì đã gitignore).
+2. Vào https://render.com → **New** → **Web Service** → kết nối repo `Quang-RH/Quang-test`.
 3. Render tự phát hiện `Dockerfile`. Để mặc định (Render tự set `PORT`).
 4. Mục **Environment Variables**, thêm:
    | Key | Value |
    |---|---|
-   | `GEMINI_API_KEY` | *(key Gemini mới)* |
+   | `GEMINI_API_KEY` | *(key Gemini MỚI — tự tạo)* |
    | `GEMINI_MODEL` | `gemini-2.5-flash` |
-   | `APP_PASSWORD` | *(mật khẩu bạn chọn)* |
+   | `APP_PASSWORD` | *(mật khẩu bạn đã chọn — gõ trực tiếp ở đây, KHÔNG ghi vào code)* |
    | `FOOTER_TEXT` | *(tùy)* |
-5. **Create Web Service** → đợi build → được URL kiểu `https://ai-meeting-notes.onrender.com`.
+5. **Create Web Service** → đợi build → được URL kiểu `https://quang-test.onrender.com`.
 
 > Free tier: dịch vụ "ngủ" sau ~15 phút không dùng → lần mở đầu sau khi ngủ chờ ~30-60s (cold start) rồi chạy bình thường. Hợp với nhu cầu thỉnh thoảng tạo biên bản.
 

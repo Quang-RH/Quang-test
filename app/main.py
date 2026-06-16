@@ -70,7 +70,6 @@ async def process(
     file: UploadFile = File(...),
     title: str = Form(""),
     meeting_date: str = Form(""),
-    participants: str = Form(""),
     _: None = Depends(require_auth),
 ):
     contents = await file.read()
@@ -91,7 +90,7 @@ async def process(
 
         meeting = render.normalize(
             ai,
-            {"title": title, "meeting_date": meeting_date, "participants": participants},
+            {"title": title, "meeting_date": meeting_date},
             render.make_meeting_id(),
         )
         return {"meeting": meeting, "markdown": render.to_markdown(meeting)}

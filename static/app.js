@@ -55,7 +55,6 @@ btnRun.addEventListener("click", async () => {
   fd.append("file", selectedFile);
   fd.append("title", $("mTitle").value.trim());
   fd.append("meeting_date", $("mDate").value.trim());
-  fd.append("participants", $("mParticipants").value.trim());
 
   try {
     const res = await fetch("/process", { method: "POST", body: fd });
@@ -86,7 +85,6 @@ function renderDoc(m) {
   html += `<div class="doc-meta">
     <div><strong>Tên cuộc họp:</strong> ${esc(m.title)}</div>
     <div><strong>Ngày họp:</strong> ${esc(m.meeting_date)}</div>
-    <div><strong>Đối tượng:</strong> ${esc(m.participants)}</div>
   </div>`;
 
   html += `<h2 class="sec">1. Tóm tắt cuộc họp (Summary)</h2>`;
@@ -103,22 +101,11 @@ function renderDoc(m) {
 
   html += `<h2 class="sec">3. Danh sách công việc (Action Items)</h2>`;
   html += `<table><thead><tr>
-    <th style="width:24%">Tên công việc</th>
-    <th style="width:14%">Người phụ trách</th>
-    <th style="width:16%">Trạng thái / Deadline</th>
+    <th style="width:34%">Tên công việc</th>
+    <th style="width:20%">Trạng thái / Deadline</th>
     <th>Ghi chú từ cuộc họp</th></tr></thead><tbody>`;
   (m.action_items || []).forEach((a) => {
-    html += `<tr><td>${esc(a.task)}</td><td>${esc(a.owner)}</td><td>${esc(a.status_deadline)}</td><td>${esc(a.note)}</td></tr>`;
-  });
-  html += `</tbody></table>`;
-
-  html += `<h2 class="sec">4. Phân công nhân sự (Personnel Assignments)</h2>`;
-  html += `<table><thead><tr>
-    <th style="width:30%">Thành viên</th>
-    <th style="width:22%">Tổ chức</th>
-    <th>Vai trò / Nhiệm vụ phụ trách</th></tr></thead><tbody>`;
-  (m.personnel || []).forEach((p) => {
-    html += `<tr><td>${esc(p.member)}</td><td>${esc(p.organization)}</td><td>${esc(p.role)}</td></tr>`;
+    html += `<tr><td>${esc(a.task)}</td><td>${esc(a.status_deadline)}</td><td>${esc(a.note)}</td></tr>`;
   });
   html += `</tbody></table>`;
 
