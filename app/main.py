@@ -1,13 +1,32 @@
 """FastAPI app: phục vụ trang + xử lý file họp."""
 import os
+import secrets
 import tempfile
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.staticfiles import StaticFiles
 
 from app import config, gemini_service, render
+
+_security = HTTPBasic(auto_error=False)
+
+
+def require_auth(creds: HTTPBasicCredentials = Depends(_security)) -> None:
+    """Chặn bằng HTTP Basic nếu APP_PASSWORD được đặt; bỏ qua nếu để trống (local)."""
+    if not config.APP_PASSWORD:
+        return
+    ok = creds is not None and secrets.compare_digest(
+        creds.password, config.APP_PASSWORD
+    )
+    if not ok:
+        raise HTTPException(
+            status_code=401,
+            detail="Sai mật khẩu",
+            headers={"WWW-Authenticate": "Basic"},
+        )
 
 ALLOWED_EXT = {
     ".mp3", ".m4a", ".mp4", ".wav", ".aac", ".ogg",
@@ -42,7 +61,7 @@ def validate_file(filename: str, size_bytes: int) -> None:
 
 
 @app.get("/")
-def index():
+def index(_: None = Depends(require_auth)):
     return FileResponse(os.path.join(STATIC_DIR, "index.html"))
 
 
@@ -52,6 +71,7 @@ async def process(
     title: str = Form(""),
     meeting_date: str = Form(""),
     participants: str = Form(""),
+    _: None = Depends(require_auth),
 ):
     contents = await file.read()
     try:

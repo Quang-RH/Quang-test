@@ -1,0 +1,14 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+.git/
+.gitignore
+tests/
+docs/
+*.md
+tmp/
+*.mp3
+*.m4a
+*.mp4
+*.wav
