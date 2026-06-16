@@ -83,8 +83,9 @@ async def process(
     try:
         tmp.write(contents)
         tmp.close()
+        mime_type = gemini_service.guess_mime(file.filename, file.content_type or "")
         try:
-            ai = gemini_service.summarize_meeting(tmp.name)
+            ai = gemini_service.summarize_meeting(tmp.name, mime_type)
         except Exception as e:  # noqa: BLE001 - bao lỗi AI thành 502
             raise HTTPException(status_code=502, detail=f"Lỗi xử lý AI: {e}")
 
