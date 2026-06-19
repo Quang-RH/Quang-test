@@ -208,6 +208,20 @@ body {
 }
 .findpane { font-size: 14px; }
 .find-count { font-weight: 700; color: var(--muted); margin-bottom: 10px; }
+
+/* ảnh trang PDF + overlay highlight (Turnitin) */
+.docpane.imgmode { padding: 10px; background: #eceff2; }
+.pageimg { position: relative; margin: 0 auto 12px; max-width: 100%; box-shadow: 0 1px 4px rgba(0,0,0,.18); }
+.pageimg img { display: block; width: 100%; }
+.hloverlay {
+  position: absolute;
+  cursor: pointer;
+  border-radius: 2px;
+}
+.hloverlay.sev-high { background: rgba(231,76,60,.32); outline: 1px solid rgba(231,76,60,.75); }
+.hloverlay.sev-mid  { background: rgba(230,149,0,.30); outline: 1px solid rgba(230,149,0,.75); }
+.hloverlay.sev-low  { background: rgba(212,177,6,.32); outline: 1px solid rgba(212,177,6,.75); }
+.hloverlay.flash { outline: 2px solid var(--blue); background: rgba(31,95,168,.25); }
 @media (max-width: 820px) { .twopane { grid-template-columns: 1fr; } }
 
 /* highlight trong tài liệu */

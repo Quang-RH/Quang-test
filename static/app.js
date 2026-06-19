@@ -177,7 +177,6 @@ function findQuoteIndex(text, quote, ranges) {
 
 function renderReview(data) {
   const r = data.review;
-  const text = data.text || "";
   const findings = r.findings || [];
 
   // 1) thanh tổng quan + scorecard
@@ -200,36 +199,64 @@ function renderReview(data) {
     `<div class="overall-text"><strong>${esc(r.doc_type)}</strong> — ${esc(r.overall)}</div>` +
     scHtml;
 
-  // 2) định vị highlight trong text
+  // 2) cột trái: ảnh trang (PDF) hoặc text (Office). located = id đã định vị được.
+  const located = new Set();
+  if (data.mode === "pdf-image") {
+    renderImagePane(data.pages || [], located);
+  } else {
+    renderTextPane(data.text || "", findings, located);
+  }
+
+  // 3) thẻ phát hiện bên phải
+  renderCards(findings, located);
+}
+
+function renderImagePane(pages, located) {
+  $("docPane").classList.add("imgmode");
+  let html = "";
+  pages.forEach((pg) => {
+    html += `<div class="pageimg"><img src="${pg.image}" alt="trang tài liệu" />`;
+    (pg.highlights || []).forEach((h) => {
+      located.add(h.id);
+      html +=
+        `<div class="hloverlay ${sevClass(h.sev)}" data-id="${h.id}" title="Lỗi #${h.id + 1}" ` +
+        `style="left:${(h.x * 100).toFixed(2)}%;top:${(h.y * 100).toFixed(2)}%;` +
+        `width:${(h.w * 100).toFixed(2)}%;height:${(h.h * 100).toFixed(2)}%"></div>`;
+    });
+    html += `</div>`;
+  });
+  $("docPane").innerHTML = html || "<em>(không có trang)</em>";
+}
+
+function renderTextPane(text, findings, located) {
+  $("docPane").classList.remove("imgmode");
   const ranges = [];
   findings.forEach((f, i) => {
     const q = (f.quote || "").trim();
-    if (!q) { f._located = false; return; }
+    if (!q) return;
     const idx = findQuoteIndex(text, q, ranges);
     if (idx >= 0) {
       ranges.push({ start: idx, end: idx + q.length, id: i, sev: f.severity });
-      f._located = true;
-    } else {
-      f._located = false;
+      located.add(i);
     }
   });
   ranges.sort((a, b) => a.start - b.start);
-
-  let docHtml = "", cur = 0;
+  let html = "", cur = 0;
   for (const rg of ranges) {
-    docHtml += esc(text.slice(cur, rg.start));
-    docHtml += `<mark class="hl ${sevClass(rg.sev)}" data-id="${rg.id}" id="hl-${rg.id}">${esc(
+    html += esc(text.slice(cur, rg.start));
+    html += `<mark class="hl ${sevClass(rg.sev)}" data-id="${rg.id}">${esc(
       text.slice(rg.start, rg.end)
     )}</mark>`;
     cur = rg.end;
   }
-  docHtml += esc(text.slice(cur));
-  $("docPane").innerHTML = docHtml || "<em>(không có nội dung)</em>";
+  html += esc(text.slice(cur));
+  $("docPane").innerHTML = html || "<em>(không có nội dung)</em>";
+}
 
-  // 3) thẻ phát hiện
-  let findHtml = `<div class="find-count">${findings.length} phát hiện</div>`;
+function renderCards(findings, located) {
+  let html = `<div class="find-count">${findings.length} phát hiện</div>`;
   findings.forEach((f, i) => {
-    findHtml += `<div class="finding" data-id="${i}" id="card-${i}">
+    html += `<div class="finding" data-id="${i}" id="card-${i}">
       <div class="f-head">
         <span class="f-num">#${i + 1}</span>
         <span class="dot ${sevClass(f.severity)}"></span>
@@ -239,10 +266,10 @@ function renderReview(data) {
       ${f.quote ? `<div class="quote">${esc(f.quote)}</div>` : ""}
       <div class="f-issue"><strong>Vì sao:</strong> ${esc(f.why)}</div>
       <div class="f-fix"><strong>Sửa:</strong> ${esc(f.suggestion)}</div>
-      ${f._located ? "" : `<div class="nolocate">⚠ Không định vị được trong text</div>`}
+      ${located.has(i) ? "" : `<div class="nolocate">⚠ Không định vị được trên tài liệu</div>`}
     </div>`;
   });
-  $("findPane").innerHTML = findHtml;
+  $("findPane").innerHTML = html;
 }
 
 /* link 2 chiều: bấm highlight ↔ thẻ */
@@ -253,12 +280,12 @@ function flash(el) {
   setTimeout(() => el.classList.remove("flash"), 1500);
 }
 $("docPane").addEventListener("click", (e) => {
-  const m = e.target.closest("mark.hl");
+  const m = e.target.closest("mark.hl, .hloverlay");
   if (m) flash($("card-" + m.dataset.id));
 });
 $("findPane").addEventListener("click", (e) => {
   const c = e.target.closest(".finding");
-  if (c) flash($("hl-" + c.dataset.id));
+  if (c) flash(document.querySelector('#docPane [data-id="' + c.dataset.id + '"]'));
 });
 
 /* xuất ra trang HTML riêng để in */

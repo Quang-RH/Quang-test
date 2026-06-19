@@ -9,7 +9,7 @@ from fastapi.responses import FileResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.staticfiles import StaticFiles
 
-from app import config, doc_review, extract, gemini_service, render
+from app import config, doc_review, extract, gemini_service, pdf_render, render
 
 _security = HTTPBasic(auto_error=False)
 
@@ -133,36 +133,71 @@ async def review_doc(
     try:
         tmp.write(contents)
         tmp.close()
+
+        if ext == ".pdf":
+            return _review_pdf(file.filename, tmp.name)
+
+        # Office / text: trích text -> review (chế độ text)
         try:
             text = extract.extract_text(tmp.name, file.filename)
         except Exception as e:  # noqa: BLE001 - lỗi đọc file -> 400
             raise HTTPException(status_code=400, detail=f"Không đọc được tài liệu: {e}")
-
-        if text.strip():
-            # có lớp text -> review theo text trích xuất
-            try:
-                review = doc_review.review_document(text)
-            except Exception as e:  # noqa: BLE001 - bao lỗi AI thành 502
-                raise HTTPException(status_code=502, detail=f"Lỗi xử lý AI: {e}")
-        elif ext == ".pdf":
-            # PDF không có text (bản scan ảnh) -> Gemini đọc thẳng (OCR) + review
-            try:
-                text, review = doc_review.review_pdf_native(tmp.name)
-            except Exception as e:  # noqa: BLE001
-                raise HTTPException(status_code=502, detail=f"Lỗi xử lý AI (đọc PDF scan): {e}")
-            if not text.strip():
-                raise HTTPException(status_code=400, detail="Không đọc được nội dung từ PDF này.")
-        else:
+        if not text.strip():
             raise HTTPException(
                 status_code=400,
-                detail="Không trích được text (file rỗng, hoặc bản scan ảnh không phải PDF — thử lưu sang PDF).",
+                detail="Không trích được text (file rỗng hoặc bản scan ảnh — hãy lưu sang PDF).",
             )
-        return {"filename": file.filename, "text": text, "review": review}
+        try:
+            review = doc_review.review_document(text)
+        except Exception as e:  # noqa: BLE001 - bao lỗi AI thành 502
+            raise HTTPException(status_code=502, detail=f"Lỗi xử lý AI: {e}")
+        return {"filename": file.filename, "mode": "text", "text": text, "review": review}
     finally:
         try:
             os.unlink(tmp.name)
         except OSError:
             pass
+
+
+def _review_pdf(filename: str, path: str) -> dict:
+    """PDF -> ảnh trang + highlight (Turnitin). PDF gõ máy = tô theo tọa độ; scan = ảnh + OCR review."""
+    try:
+        full_text, pages = pdf_render.render_pdf(path)
+    except Exception as e:  # noqa: BLE001
+        raise HTTPException(status_code=400, detail=f"Không đọc được PDF: {e}")
+
+    if full_text.strip():
+        # PDF có lớp text -> review + định vị highlight theo tọa độ
+        try:
+            review = doc_review.review_document(full_text)
+        except Exception as e:  # noqa: BLE001
+            raise HTTPException(status_code=502, detail=f"Lỗi xử lý AI: {e}")
+        page_h = [[] for _ in pages]
+        for i, f in enumerate(review.get("findings", [])):
+            q = (f.get("quote") or "").strip()
+            if not q:
+                continue
+            for rc in pdf_render.locate_quote(pages, q):
+                page_h[rc["page"]].append(
+                    {"id": i, "x": rc["x"], "y": rc["y"], "w": rc["w"], "h": rc["h"],
+                     "sev": f.get("severity", "thấp")}
+                )
+        pages_payload = [
+            {"image": pages[idx]["image"], "highlights": page_h[idx]} for idx in range(len(pages))
+        ]
+        return {"filename": filename, "mode": "pdf-image", "pages": pages_payload,
+                "text": full_text, "review": review}
+
+    # PDF scan (không có lớp text) -> Gemini OCR + review; hiện ảnh nhưng không overlay
+    try:
+        text, review = doc_review.review_pdf_native(path)
+    except Exception as e:  # noqa: BLE001
+        raise HTTPException(status_code=502, detail=f"Lỗi xử lý AI (đọc PDF scan): {e}")
+    if not text.strip():
+        raise HTTPException(status_code=400, detail="Không đọc được nội dung từ PDF này.")
+    pages_payload = [{"image": p["image"], "highlights": []} for p in pages]
+    return {"filename": filename, "mode": "pdf-image", "pages": pages_payload,
+            "text": text, "review": review}
 
 
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
