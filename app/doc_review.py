@@ -42,3 +42,34 @@ Chỉ trả về JSON đúng schema, không kèm giải thích."""
 def review_document(text: str) -> dict:
     contents = [REVIEW_PROMPT, "\n\n=== TÀI LIỆU ===\n" + text]
     return gemini_service.generate_json(contents, ReviewResult)
+
+
+# ---- Đường PDF scan: để Gemini đọc thẳng (OCR) + review trong 1 lần ----
+class ReviewWithText(BaseModel):
+    document_text: str  # toàn bộ text Gemini đọc/OCR được từ PDF
+    doc_type: str
+    overall: str
+    rating: str
+    findings: list[Finding]
+
+
+PDF_NATIVE_PROMPT = """Tài liệu đính kèm là một file PDF (CÓ THỂ là bản scan ảnh, không có lớp text).
+Hãy ĐỌC toàn bộ nội dung tài liệu (OCR nếu là ảnh), rồi trả JSON đúng schema:
+- document_text: TOÀN BỘ nội dung text bạn đọc được, giữ đúng thứ tự đọc và xuống dòng hợp lý.
+- doc_type: loại tài liệu.
+- overall: đánh giá tổng quan THẲNG THẮN, trung thực, không nể nang.
+- rating: xếp loại ngắn (vd "3/5" hoặc "Khá - cần sửa").
+- findings: từng vấn đề (type: chính tả|ngữ pháp|rõ ràng|logic|thiếu sót|văn phong|nhất quán|số liệu;
+  severity: cao|vừa|thấp; quote: trích NGUYÊN VĂN từ chính document_text bạn vừa tạo để hệ thống tô màu khớp;
+  issue: sai/yếu gì; suggestion: sửa thế nào).
+Giữ nguyên thuật ngữ tiếng Anh. Không bịa. Chỉ trả JSON đúng schema."""
+
+
+def review_pdf_native(file_path: str):
+    """Cho PDF scan: Gemini OCR + review. Trả (text, review_dict)."""
+    result = gemini_service.generate_json_with_file(
+        file_path, "application/pdf", PDF_NATIVE_PROMPT, ReviewWithText
+    )
+    text = result.get("document_text", "")
+    review = {k: result.get(k) for k in ("doc_type", "overall", "rating", "findings")}
+    return text, review

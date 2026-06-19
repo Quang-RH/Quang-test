@@ -137,15 +137,26 @@ async def review_doc(
             text = extract.extract_text(tmp.name, file.filename)
         except Exception as e:  # noqa: BLE001 - lỗi đọc file -> 400
             raise HTTPException(status_code=400, detail=f"Không đọc được tài liệu: {e}")
-        if not text.strip():
+
+        if text.strip():
+            # có lớp text -> review theo text trích xuất
+            try:
+                review = doc_review.review_document(text)
+            except Exception as e:  # noqa: BLE001 - bao lỗi AI thành 502
+                raise HTTPException(status_code=502, detail=f"Lỗi xử lý AI: {e}")
+        elif ext == ".pdf":
+            # PDF không có text (bản scan ảnh) -> Gemini đọc thẳng (OCR) + review
+            try:
+                text, review = doc_review.review_pdf_native(tmp.name)
+            except Exception as e:  # noqa: BLE001
+                raise HTTPException(status_code=502, detail=f"Lỗi xử lý AI (đọc PDF scan): {e}")
+            if not text.strip():
+                raise HTTPException(status_code=400, detail="Không đọc được nội dung từ PDF này.")
+        else:
             raise HTTPException(
                 status_code=400,
-                detail="Không trích được nội dung text (tài liệu rỗng hoặc là bản scan ảnh?).",
+                detail="Không trích được text (file rỗng, hoặc bản scan ảnh không phải PDF — thử lưu sang PDF).",
             )
-        try:
-            review = doc_review.review_document(text)
-        except Exception as e:  # noqa: BLE001 - bao lỗi AI thành 502
-            raise HTTPException(status_code=502, detail=f"Lỗi xử lý AI: {e}")
         return {"filename": file.filename, "text": text, "review": review}
     finally:
         try:

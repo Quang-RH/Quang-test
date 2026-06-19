@@ -134,6 +134,19 @@ def generate_json(contents, schema) -> dict:
     return _generate_with_retry(_client(), contents, schema)
 
 
+def generate_json_with_file(file_path: str, mime_type: str, prompt: str, schema) -> dict:
+    """Upload 1 file lên Gemini rồi sinh JSON theo schema (vd PDF scan -> OCR + review)."""
+    client = _client()
+    uploaded = _upload_and_wait(client, file_path, mime_type)
+    try:
+        return _generate_with_retry(client, [prompt, uploaded], schema)
+    finally:
+        try:
+            client.files.delete(name=uploaded.name)
+        except Exception:  # noqa: BLE001 - dọn dẹp best-effort
+            pass
+
+
 def summarize_meeting(file_path: str, mime_type: str) -> dict:
     """Nhận đường dẫn file audio + mime_type -> dict biên bản theo MeetingSummary."""
     client = _client()
