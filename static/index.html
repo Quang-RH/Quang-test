@@ -3,46 +3,88 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AI Meeting Notes — Biên bản họp tự động</title>
+  <title>AI Meeting Notes — Biên bản họp & Review tài liệu</title>
   <link rel="stylesheet" href="/static/styles.css" />
 </head>
 <body>
-  <!-- Bảng điều khiển (ẩn khi in) -->
-  <section class="panel no-print" id="controls">
-    <h1 class="panel-title">🎙️ AI Meeting Notes</h1>
-    <p class="panel-sub">Tải file ghi âm cuộc họp → AI tạo biên bản họp tự động.</p>
+  <!-- Tab bar -->
+  <header class="topbar no-print">
+    <div class="tabs">
+      <button class="tab active" data-tab="meeting">🎙️ Biên bản họp</button>
+      <button class="tab" data-tab="review">📄 Review tài liệu</button>
+    </div>
+  </header>
 
-    <div class="dropzone" id="dropzone">
-      <input type="file" id="fileInput" accept="audio/*,video/*,.mp3,.m4a,.mp4,.wav,.aac,.ogg,.flac,.webm,.opus" hidden />
-      <div class="dz-inner">
-        <div class="dz-icon">⬆️</div>
-        <div class="dz-text">Kéo-thả file audio vào đây, hoặc <span class="dz-link">bấm để chọn</span></div>
-        <div class="dz-file" id="fileName"></div>
+  <!-- ===================== TAB: BIÊN BẢN HỌP ===================== -->
+  <div id="tab-meeting" class="tabpane">
+    <section class="panel no-print" id="controls">
+      <h1 class="panel-title">🎙️ AI Meeting Notes</h1>
+      <p class="panel-sub">Tải file ghi âm cuộc họp → AI tạo biên bản họp tự động.</p>
+
+      <div class="dropzone" id="dropzone">
+        <input type="file" id="fileInput" accept="audio/*,video/*,.mp3,.m4a,.mp4,.wav,.aac,.ogg,.flac,.webm,.opus" hidden />
+        <div class="dz-inner">
+          <div class="dz-icon">⬆️</div>
+          <div class="dz-text">Kéo-thả file audio vào đây, hoặc <span class="dz-link">bấm để chọn</span></div>
+          <div class="dz-file" id="fileName"></div>
+        </div>
       </div>
-    </div>
 
-    <div class="meta-grid">
-      <label>Tên cuộc họp <span class="opt">(tùy chọn)</span>
-        <input type="text" id="mTitle" placeholder="VD: Họp review cơ chế cấu hình" />
-      </label>
-      <label>Ngày họp <span class="opt">(tùy chọn)</span>
-        <input type="text" id="mDate" placeholder="VD: 12/06/2026" />
-      </label>
-    </div>
+      <div class="meta-grid">
+        <label>Tên cuộc họp <span class="opt">(tùy chọn)</span>
+          <input type="text" id="mTitle" placeholder="VD: Họp review cơ chế cấu hình" />
+        </label>
+        <label>Ngày họp <span class="opt">(tùy chọn)</span>
+          <input type="text" id="mDate" placeholder="VD: 12/06/2026" />
+        </label>
+      </div>
 
-    <button class="btn-primary" id="btnRun" disabled>Tạo biên bản</button>
-    <div class="status" id="status"></div>
-  </section>
+      <button class="btn-primary" id="btnRun" disabled>Tạo biên bản</button>
+      <div class="status" id="status"></div>
+    </section>
 
-  <!-- Thanh hành động kết quả (ẩn khi in) -->
-  <section class="actionbar no-print" id="actionbar" hidden>
-    <button class="btn" id="btnPrint">🖨️ In / Lưu PDF</button>
-    <button class="btn" id="btnCopy">📋 Copy markdown</button>
-    <button class="btn" id="btnDownload">⬇️ Tải .md</button>
-  </section>
+    <section class="actionbar no-print" id="actionbar" hidden>
+      <button class="btn" id="btnPrint">🖨️ In / Lưu PDF</button>
+      <button class="btn" id="btnCopy">📋 Copy markdown</button>
+      <button class="btn" id="btnDownload">⬇️ Tải .md</button>
+    </section>
 
-  <!-- Biên bản (in được) -->
-  <main class="doc" id="doc" hidden></main>
+    <main class="doc" id="doc" hidden></main>
+  </div>
+
+  <!-- ===================== TAB: REVIEW TÀI LIỆU ===================== -->
+  <div id="tab-review" class="tabpane" hidden>
+    <section class="panel no-print">
+      <h1 class="panel-title">📄 Review tài liệu</h1>
+      <p class="panel-sub">Tải tài liệu (PDF / Word / PPTX / Excel) → AI đánh giá thẳng thắn + chỉ rõ chỗ cần sửa.</p>
+
+      <div class="dropzone" id="rDropzone">
+        <input type="file" id="rFileInput" accept=".pdf,.docx,.pptx,.xlsx,.txt,.md" hidden />
+        <div class="dz-inner">
+          <div class="dz-icon">⬆️</div>
+          <div class="dz-text">Kéo-thả tài liệu vào đây, hoặc <span class="dz-link">bấm để chọn</span></div>
+          <div class="dz-file" id="rFileName"></div>
+        </div>
+      </div>
+
+      <button class="btn-primary" id="rBtnRun" disabled>Review tài liệu</button>
+      <div class="status" id="rStatus"></div>
+    </section>
+
+    <section id="reviewResult" hidden>
+      <div class="overall" id="overallBar"></div>
+
+      <div class="actionbar no-print">
+        <button class="btn" id="rBtnPrint">🖨️ Mở bản HTML để in</button>
+        <button class="btn" id="rBtnCopy">📋 Copy</button>
+      </div>
+
+      <div class="twopane">
+        <div class="pane docpane" id="docPane" title="Tài liệu (text trích xuất) — chỗ tô màu là lỗi"></div>
+        <div class="pane findpane" id="findPane"></div>
+      </div>
+    </section>
+  </div>
 
   <script src="/static/app.js"></script>
 </body>

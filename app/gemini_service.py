@@ -101,22 +101,22 @@ def _upload_and_wait(client: genai.Client, file_path: str, mime_type: str, timeo
     return f
 
 
-def _generate(client: genai.Client, uploaded, max_attempts: int = 4) -> dict:
-    """Gọi model, parse JSON. Retry: lỗi tạm thời (429/503/500) có backoff; JSON hỏng retry thẳng."""
+def _generate_with_retry(client: genai.Client, contents, schema, max_attempts: int = 4) -> dict:
+    """Gọi model với JSON mode + schema. Retry: lỗi tạm thời (429/503/500) backoff; JSON hỏng retry thẳng."""
     last_err = None
     for attempt in range(max_attempts):
         try:
             resp = client.models.generate_content(
                 model=config.GEMINI_MODEL,
-                contents=[PROMPT, uploaded],
+                contents=contents,
                 config=types.GenerateContentConfig(
                     response_mime_type="application/json",
-                    response_schema=MeetingSummary,
+                    response_schema=schema,
                     temperature=0.2,
                 ),
             )
             data = json.loads(resp.text)
-            MeetingSummary(**data)  # validate cấu trúc
+            schema(**data)  # validate cấu trúc
             return data
         except genai_errors.APIError as e:
             last_err = e
@@ -129,12 +129,17 @@ def _generate(client: genai.Client, uploaded, max_attempts: int = 4) -> dict:
     raise ValueError(f"Gemini trả JSON không hợp lệ sau {max_attempts} lần thử: {last_err}")
 
 
+def generate_json(contents, schema) -> dict:
+    """Tiện ích: tạo client + sinh JSON theo schema (cho input text như review tài liệu)."""
+    return _generate_with_retry(_client(), contents, schema)
+
+
 def summarize_meeting(file_path: str, mime_type: str) -> dict:
     """Nhận đường dẫn file audio + mime_type -> dict biên bản theo MeetingSummary."""
     client = _client()
     uploaded = _upload_and_wait(client, file_path, mime_type)
     try:
-        return _generate(client, uploaded)
+        return _generate_with_retry(client, [PROMPT, uploaded], MeetingSummary)
     finally:
         try:
             client.files.delete(name=uploaded.name)

@@ -9,7 +9,7 @@ from fastapi.responses import FileResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.staticfiles import StaticFiles
 
-from app import config, gemini_service, render
+from app import config, doc_review, extract, gemini_service, render
 
 _security = HTTPBasic(auto_error=False)
 
@@ -45,19 +45,34 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="AI Meeting Notes", lifespan=lifespan)
 
 
+def _check_size(size_bytes: int) -> None:
+    if size_bytes > config.MAX_FILE_MB * 1024 * 1024:
+        raise ValueError(
+            f"File quá lớn ({size_bytes / 1024 / 1024:.1f}MB). "
+            f"Giới hạn {config.MAX_FILE_MB}MB."
+        )
+
+
 def validate_file(filename: str, size_bytes: int) -> None:
-    """Raise ValueError nếu sai định dạng hoặc quá lớn."""
+    """Raise ValueError nếu sai định dạng audio hoặc quá lớn."""
     ext = os.path.splitext(filename or "")[1].lower()
     if ext not in ALLOWED_EXT:
         raise ValueError(
             f"Định dạng không hỗ trợ: {ext or '(không rõ)'}. "
             f"Hỗ trợ: {', '.join(sorted(ALLOWED_EXT))}"
         )
-    if size_bytes > config.MAX_FILE_MB * 1024 * 1024:
+    _check_size(size_bytes)
+
+
+def validate_doc(filename: str, size_bytes: int) -> None:
+    """Raise ValueError nếu sai định dạng tài liệu hoặc quá lớn."""
+    ext = os.path.splitext(filename or "")[1].lower()
+    if ext not in extract.ALLOWED_DOC_EXT:
         raise ValueError(
-            f"File quá lớn ({size_bytes / 1024 / 1024:.1f}MB). "
-            f"Giới hạn {config.MAX_FILE_MB}MB."
+            f"Định dạng không hỗ trợ: {ext or '(không rõ)'}. "
+            f"Hỗ trợ: {', '.join(sorted(extract.ALLOWED_DOC_EXT))}"
         )
+    _check_size(size_bytes)
 
 
 @app.get("/")
@@ -95,6 +110,43 @@ async def process(
             render.make_meeting_id(),
         )
         return {"meeting": meeting, "markdown": render.to_markdown(meeting)}
+    finally:
+        try:
+            os.unlink(tmp.name)
+        except OSError:
+            pass
+
+
+@app.post("/review-doc")
+async def review_doc(
+    file: UploadFile = File(...),
+    _: None = Depends(require_auth),
+):
+    contents = await file.read()
+    try:
+        validate_doc(file.filename, len(contents))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    ext = os.path.splitext(file.filename)[1].lower()
+    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=ext)
+    try:
+        tmp.write(contents)
+        tmp.close()
+        try:
+            text = extract.extract_text(tmp.name, file.filename)
+        except Exception as e:  # noqa: BLE001 - lỗi đọc file -> 400
+            raise HTTPException(status_code=400, detail=f"Không đọc được tài liệu: {e}")
+        if not text.strip():
+            raise HTTPException(
+                status_code=400,
+                detail="Không trích được nội dung text (tài liệu rỗng hoặc là bản scan ảnh?).",
+            )
+        try:
+            review = doc_review.review_document(text)
+        except Exception as e:  # noqa: BLE001 - bao lỗi AI thành 502
+            raise HTTPException(status_code=502, detail=f"Lỗi xử lý AI: {e}")
+        return {"filename": file.filename, "text": text, "review": review}
     finally:
         try:
             os.unlink(tmp.name)
