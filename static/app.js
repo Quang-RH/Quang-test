@@ -157,6 +157,10 @@ function sevClass(s) {
   return s === "cao" ? "sev-high" : s === "vừa" ? "sev-mid" : "sev-low";
 }
 
+function scoreClass(s) {
+  return s === "Đạt" ? "sc-ok" : s === "Một phần" ? "sc-mid" : "sc-bad";
+}
+
 /* tìm vị trí quote chưa bị range nào chiếm */
 function findQuoteIndex(text, quote, ranges) {
   let from = 0;
@@ -176,10 +180,25 @@ function renderReview(data) {
   const text = data.text || "";
   const findings = r.findings || [];
 
-  // 1) thanh tổng quan
+  // 1) thanh tổng quan + scorecard
+  let scHtml = "";
+  if (r.scorecard && r.scorecard.length) {
+    scHtml =
+      `<table class="scorecard"><tbody>` +
+      r.scorecard
+        .map(
+          (d) =>
+            `<tr><td class="sc-dim">${esc(d.dimension)}</td>` +
+            `<td><span class="sc ${scoreClass(d.score)}">${esc(d.score)}</span></td>` +
+            `<td class="sc-note">${esc(d.note)}</td></tr>`
+        )
+        .join("") +
+      `</tbody></table>`;
+  }
   $("overallBar").innerHTML =
     `<div class="rating">Xếp loại: ${esc(r.rating)}</div>` +
-    `<div class="overall-text"><strong>${esc(r.doc_type)}</strong> — ${esc(r.overall)}</div>`;
+    `<div class="overall-text"><strong>${esc(r.doc_type)}</strong> — ${esc(r.overall)}</div>` +
+    scHtml;
 
   // 2) định vị highlight trong text
   const ranges = [];
@@ -218,7 +237,7 @@ function renderReview(data) {
         <span class="badge">${esc(f.severity)}</span>
       </div>
       ${f.quote ? `<div class="quote">${esc(f.quote)}</div>` : ""}
-      <div class="f-issue"><strong>Vấn đề:</strong> ${esc(f.issue)}</div>
+      <div class="f-issue"><strong>Vì sao:</strong> ${esc(f.why)}</div>
       <div class="f-fix"><strong>Sửa:</strong> ${esc(f.suggestion)}</div>
       ${f._located ? "" : `<div class="nolocate">⚠ Không định vị được trong text</div>`}
     </div>`;
@@ -253,12 +272,18 @@ $("rBtnCopy").addEventListener("click", () => copyText(reviewToMarkdown(lastRevi
 
 function buildPrintable(data) {
   const r = data.review;
+  const scRows = (r.scorecard || [])
+    .map((d) => `<tr><td>${esc(d.dimension)}</td><td>${esc(d.score)}</td><td>${esc(d.note)}</td></tr>`)
+    .join("");
+  const scTable = scRows
+    ? `<table class="sc"><thead><tr><th>Tiêu chí</th><th>Đánh giá</th><th>Nhận xét</th></tr></thead><tbody>${scRows}</tbody></table>`
+    : "";
   const items = (r.findings || [])
     .map(
       (x, i) => `<div class="pf">
       <div class="pf-h">${i + 1}. [${esc(x.type)} · ${esc(x.severity)}]</div>
       ${x.quote ? `<blockquote>${esc(x.quote)}</blockquote>` : ""}
-      <div><b>Vấn đề:</b> ${esc(x.issue)}</div>
+      <div><b>Vì sao:</b> ${esc(x.why)}</div>
       <div><b>Đề xuất sửa:</b> ${esc(x.suggestion)}</div>
     </div>`
     )
@@ -270,12 +295,16 @@ function buildPrintable(data) {
     h1{color:#1f5fa8;font-size:24px} h2{font-size:18px;margin-top:24px}
     .rating{font-weight:700} blockquote{border-left:3px solid #ddd;margin:6px 0;padding:4px 10px;color:#444;background:#fafafa}
     .pf{margin:14px 0;padding-bottom:10px;border-bottom:1px solid #eee} .pf-h{font-weight:700;color:#1f5fa8}
+    table.sc{border-collapse:collapse;width:100%;margin:8px 0;font-size:14px}
+    table.sc th,table.sc td{border:1px solid #ddd;padding:6px 10px;text-align:left}
+    table.sc th{background:#f0f2f5}
   </style></head><body>
   <h1>Báo cáo Review tài liệu</h1>
   <p><b>Tài liệu:</b> ${esc(data.filename)} &nbsp;·&nbsp; <b>Loại:</b> ${esc(r.doc_type)}</p>
   <p class="rating">Xếp loại: ${esc(r.rating)}</p>
   <h2>Đánh giá tổng quan</h2>
   <p>${esc(r.overall)}</p>
+  ${scTable ? `<h2>Bảng điểm</h2>${scTable}` : ""}
   <h2>Phát hiện &amp; đề xuất sửa (${(r.findings || []).length})</h2>
   ${items}
   </body></html>`;
@@ -285,11 +314,19 @@ function reviewToMarkdown(data) {
   const r = data.review;
   let md = `# Review tài liệu: ${data.filename}\n\n`;
   md += `**Loại:** ${r.doc_type}  \n**Xếp loại:** ${r.rating}\n\n`;
-  md += `## Đánh giá tổng quan\n\n${r.overall}\n\n## Phát hiện & đề xuất sửa\n\n`;
+  md += `## Đánh giá tổng quan\n\n${r.overall}\n\n`;
+  if (r.scorecard && r.scorecard.length) {
+    md += `## Bảng điểm\n\n| Tiêu chí | Đánh giá | Nhận xét |\n|---|---|---|\n`;
+    r.scorecard.forEach((d) => {
+      md += `| ${d.dimension} | ${d.score} | ${(d.note || "").replace(/\n/g, " ")} |\n`;
+    });
+    md += `\n`;
+  }
+  md += `## Phát hiện & đề xuất sửa\n\n`;
   (r.findings || []).forEach((x, i) => {
-    md += `${i + 1}. **[${x.type} · ${x.severity}]** ${x.issue}\n`;
+    md += `${i + 1}. **[${x.type} · ${x.severity}]**\n`;
     if (x.quote) md += `   > ${x.quote.replace(/\n/g, " ")}\n`;
-    md += `   → Sửa: ${x.suggestion}\n\n`;
+    md += `   - Vì sao: ${x.why}\n   - Sửa: ${x.suggestion}\n\n`;
   });
   return md;
 }

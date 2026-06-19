@@ -173,6 +173,14 @@ body {
 }
 .overall .rating { font-weight: 700; color: var(--blue); margin-bottom: 4px; }
 .overall .overall-text { color: #2a2a2a; }
+.scorecard { border-collapse: collapse; width: 100%; margin-top: 12px; font-size: 13px; }
+.scorecard td { border: 1px solid var(--border); padding: 6px 10px; vertical-align: top; }
+.scorecard .sc-dim { font-weight: 600; width: 30%; }
+.scorecard .sc-note { color: #555; }
+.sc { display: inline-block; padding: 1px 9px; border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+.sc-ok { background: #d6f0dd; color: #1e7e34; }
+.sc-mid { background: #ffe6c2; color: #b36b00; }
+.sc-bad { background: #ffd0d0; color: #c0392b; }
 
 /* ---------- Review: 2 cột (Turnitin) ---------- */
 .actionbar { max-width: 1100px; }
