@@ -161,6 +161,19 @@ body {
 .tab:hover { color: var(--blue); }
 .tab.active { color: var(--blue); border-bottom-color: var(--blue); }
 
+/* ---------- Review: khối tổng quan tài liệu ---------- */
+.doc-summary {
+  max-width: 1100px;
+  margin: 18px auto 0;
+  padding: 16px 20px;
+  background: #f7faff;
+  border: 1px solid #cfe0f5;
+  border-radius: 10px;
+}
+.doc-summary h3 { margin: 0 0 8px; color: var(--blue); font-size: 16px; }
+.doc-summary > div { margin: 3px 0; }
+.doc-summary .ds-content { margin-top: 8px; color: #2a2a2a; }
+
 /* ---------- Review: thanh đánh giá tổng quan ---------- */
 .overall {
   max-width: 1100px;

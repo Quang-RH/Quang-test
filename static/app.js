@@ -179,7 +179,15 @@ function renderReview(data) {
   const r = data.review;
   const findings = r.findings || [];
 
-  // 1) thanh tổng quan + scorecard
+  // 0) Tổng quan tài liệu (giúp người đọc nắm bức tranh chung trước khi vào chi tiết)
+  $("docSummary").innerHTML =
+    `<h3>📄 Tổng quan tài liệu</h3>` +
+    `<div><strong>Loại:</strong> ${esc(r.doc_type) || "—"}</div>` +
+    `<div><strong>Đơn vị / người soạn:</strong> ${esc(r.author_unit) || "Chưa xác định"}</div>` +
+    `<div><strong>Phòng ban liên quan:</strong> ${esc(r.related_units) || "Chưa xác định"}</div>` +
+    `<div class="ds-content"><strong>Nội dung chính:</strong> ${esc(r.summary)}</div>`;
+
+  // 1) thanh đánh giá tổng quan + scorecard
   let scHtml = "";
   if (r.scorecard && r.scorecard.length) {
     scHtml =
@@ -328,8 +336,12 @@ function buildPrintable(data) {
   </style></head><body>
   <h1>Báo cáo Review tài liệu</h1>
   <p><b>Tài liệu:</b> ${esc(data.filename)} &nbsp;·&nbsp; <b>Loại:</b> ${esc(r.doc_type)}</p>
+  <h2>Tổng quan tài liệu</h2>
+  <p><b>Đơn vị / người soạn:</b> ${esc(r.author_unit) || "Chưa xác định"}<br>
+     <b>Phòng ban liên quan:</b> ${esc(r.related_units) || "Chưa xác định"}</p>
+  <p>${esc(r.summary)}</p>
   <p class="rating">Xếp loại: ${esc(r.rating)}</p>
-  <h2>Đánh giá tổng quan</h2>
+  <h2>Đánh giá chất lượng (thẳng thắn)</h2>
   <p>${esc(r.overall)}</p>
   ${scTable ? `<h2>Bảng điểm</h2>${scTable}` : ""}
   <h2>Phát hiện &amp; đề xuất sửa (${(r.findings || []).length})</h2>
@@ -341,7 +353,11 @@ function reviewToMarkdown(data) {
   const r = data.review;
   let md = `# Review tài liệu: ${data.filename}\n\n`;
   md += `**Loại:** ${r.doc_type}  \n**Xếp loại:** ${r.rating}\n\n`;
-  md += `## Đánh giá tổng quan\n\n${r.overall}\n\n`;
+  md += `## Tổng quan tài liệu\n\n`;
+  md += `- **Đơn vị / người soạn:** ${r.author_unit || "Chưa xác định"}\n`;
+  md += `- **Phòng ban liên quan:** ${r.related_units || "Chưa xác định"}\n\n`;
+  md += `${r.summary}\n\n`;
+  md += `## Đánh giá chất lượng (thẳng thắn)\n\n${r.overall}\n\n`;
   if (r.scorecard && r.scorecard.length) {
     md += `## Bảng điểm\n\n| Tiêu chí | Đánh giá | Nhận xét |\n|---|---|---|\n`;
     r.scorecard.forEach((d) => {

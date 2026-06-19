@@ -3,13 +3,13 @@
 App có backend Python → **không** up tĩnh kiểu Netlify được. Phải deploy lên host chạy Python.
 Đã có sẵn `Dockerfile` nên deploy được trên Render / Google Cloud Run / Fly.io.
 
-## ⚠️ Trước khi deploy — 2 việc bắt buộc
+## ⚠️ Trước khi deploy
 
-1. **Tạo API key Gemini MỚI** (key cũ đã từng lộ trong chat) → https://aistudio.google.com/apikey
-   → key sẽ nhập vào phần *Environment Variables* của host, **không** nằm trong code.
-2. **Đặt `APP_PASSWORD`** (một mật khẩu bất kỳ) khi deploy → trang sẽ hỏi mật khẩu, chặn người lạ đốt quota.
+- **Tạo API key Gemini MỚI** (key cũ đã từng lộ trong chat) → https://aistudio.google.com/apikey
+  → key nhập vào phần *Environment Variables* của host, **không** nằm trong code.
 
 > `.env` đã được `.gitignore` → key **không bao giờ** bị đẩy lên repo/host theo code.
+> App KHÔNG còn lớp mật khẩu — ai có URL đều dùng được (theo yêu cầu). Lưu ý: người lạ có link cũng dùng được quota Gemini.
 
 ---
 
@@ -25,7 +25,6 @@ Cần: 1 tài khoản GitHub + 1 tài khoản Render (free).
    |---|---|
    | `GEMINI_API_KEY` | *(key Gemini MỚI — tự tạo)* |
    | `GEMINI_MODEL` | `gemini-2.5-flash` |
-   | `APP_PASSWORD` | *(mật khẩu bạn đã chọn — gõ trực tiếp ở đây, KHÔNG ghi vào code)* |
    | `FOOTER_TEXT` | *(tùy)* |
 5. **Create Web Service** → đợi build → được URL kiểu `https://quang-test.onrender.com`.
 
@@ -43,7 +42,7 @@ gcloud run deploy ai-meeting-notes \
   --source . \
   --region asia-southeast1 \
   --allow-unauthenticated \
-  --set-env-vars GEMINI_API_KEY=<KEY_MOI>,GEMINI_MODEL=gemini-2.5-flash,APP_PASSWORD=<MAT_KHAU>
+  --set-env-vars GEMINI_API_KEY=<KEY_MOI>,GEMINI_MODEL=gemini-2.5-flash
 ```
 
 `--source .` build thẳng từ thư mục local (không cần đẩy GitHub). Cloud Run **scale về 0** khi không dùng (gần như miễn phí khi rảnh), free tier rộng.
@@ -52,6 +51,6 @@ gcloud run deploy ai-meeting-notes \
 
 ## Sau khi deploy
 
-- Mở URL → trình duyệt hỏi mật khẩu (`APP_PASSWORD`) → đăng nhập → dùng như local.
-- Đổi mật khẩu / key: sửa Environment Variables trên host rồi redeploy.
+- Mở URL → dùng ngay (không cần đăng nhập).
+- Đổi key: sửa Environment Variables trên host rồi redeploy.
 - Theo dõi chi phí Gemini ở Google AI Studio.
