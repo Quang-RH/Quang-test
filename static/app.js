@@ -43,6 +43,28 @@ function setStatus(el, msg, cls) {
   el.className = "status" + (cls ? " " + cls : "");
 }
 
+/* đọc response an toàn: text trước rồi mới parse -> không vỡ vì body rỗng / không phải JSON */
+async function readJson(res) {
+  const text = await res.text();
+  if (!text) {
+    if (!res.ok)
+      throw new Error(`Server lỗi ${res.status} (phản hồi rỗng — có thể file quá lớn hoặc server hết RAM).`);
+    return {};
+  }
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new Error(res.ok ? "Phản hồi không hợp lệ từ server." : text.slice(0, 300));
+  }
+}
+
+/* lỗi mạng (fetch fail) -> thông báo dễ hiểu thay vì "Failed to fetch" */
+function errMessage(err) {
+  if (err && (err.name === "TypeError" || /fetch/i.test(err.message || "")))
+    return "Mất kết nối tới server (file quá lớn hoặc server hết RAM). Hãy thử file nhỏ hơn.";
+  return err.message || "Lỗi không xác định";
+}
+
 /* ===================== TAB 1: BIÊN BẢN HỌP ===================== */
 let meetingFile = null;
 let meetingMarkdown = "";
@@ -67,7 +89,7 @@ $("btnRun").addEventListener("click", async () => {
 
   try {
     const res = await fetch("/process", { method: "POST", body: fd });
-    const data = await res.json();
+    const data = await readJson(res);
     if (!res.ok) throw new Error(data.detail || "Lỗi không xác định");
     meetingMarkdown = data.markdown;
     renderMeeting(data.meeting);
@@ -76,7 +98,7 @@ $("btnRun").addEventListener("click", async () => {
     $("doc").hidden = false;
     $("doc").scrollIntoView({ behavior: "smooth" });
   } catch (err) {
-    setStatus($("status"), "❌ " + err.message, "err");
+    setStatus($("status"), "❌ " + errMessage(err), "err");
   } finally {
     $("btnRun").disabled = false;
   }
@@ -139,15 +161,21 @@ $("rBtnRun").addEventListener("click", async () => {
 
   try {
     const res = await fetch("/review-doc", { method: "POST", body: fd });
-    const data = await res.json();
+    const data = await readJson(res);
     if (!res.ok) throw new Error(data.detail || "Lỗi không xác định");
     lastReview = data;
     renderReview(data);
-    setStatus($("rStatus"), "✅ Đã review xong.", "ok");
+    setStatus(
+      $("rStatus"),
+      data.truncated
+        ? "✅ Đã review xong (PDF dài — chỉ hiển thị ảnh các trang đầu; nhận xét vẫn theo toàn bộ nội dung)."
+        : "✅ Đã review xong.",
+      "ok"
+    );
     $("reviewResult").hidden = false;
     $("reviewResult").scrollIntoView({ behavior: "smooth" });
   } catch (err) {
-    setStatus($("rStatus"), "❌ " + err.message, "err");
+    setStatus($("rStatus"), "❌ " + errMessage(err), "err");
   } finally {
     $("rBtnRun").disabled = false;
   }

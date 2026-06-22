@@ -141,7 +141,7 @@ async def review_doc(
 def _review_pdf(filename: str, path: str) -> dict:
     """PDF -> ảnh trang + highlight (Turnitin). PDF gõ máy = tô theo tọa độ; scan = ảnh + OCR review."""
     try:
-        full_text, pages = pdf_render.render_pdf(path)
+        full_text, pages, truncated = pdf_render.render_pdf(path)
     except Exception as e:  # noqa: BLE001
         raise HTTPException(status_code=400, detail=f"Không đọc được PDF: {e}")
 
@@ -165,7 +165,7 @@ def _review_pdf(filename: str, path: str) -> dict:
             {"image": pages[idx]["image"], "highlights": page_h[idx]} for idx in range(len(pages))
         ]
         return {"filename": filename, "mode": "pdf-image", "pages": pages_payload,
-                "text": full_text, "review": review}
+                "text": full_text, "review": review, "truncated": truncated}
 
     # PDF scan (không có lớp text) -> Gemini OCR + review; hiện ảnh nhưng không overlay
     try:
@@ -176,7 +176,7 @@ def _review_pdf(filename: str, path: str) -> dict:
         raise HTTPException(status_code=400, detail="Không đọc được nội dung từ PDF này.")
     pages_payload = [{"image": p["image"], "highlights": []} for p in pages]
     return {"filename": filename, "mode": "pdf-image", "pages": pages_payload,
-            "text": text, "review": review}
+            "text": text, "review": review, "truncated": truncated}
 
 
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
